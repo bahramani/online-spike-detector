@@ -1,0 +1,66 @@
+classdef online_filter < handle
+    %ONLINE_FILTER Summary of this class goes here
+    %   Detailed explanation goes here
+    
+    properties
+        fs;        
+        zf = []; % final state of filter
+
+        selected_filer
+        do_filter;
+%         b1,a1,b2,a2
+    end
+    
+    methods
+        function this = online_filter(fs)
+            this.fs = fs;
+        end
+        
+        
+        function design_filters(this, fl, fh, order, en_bpFilt, en_notch_50hz)
+            bpFilt = designfilt('bandpassiir', 'FilterOrder', order, ...
+                'PassbandFrequency1', fl,'PassbandFrequency2', fh, ...
+                'SampleRate', this.fs);
+
+            notch_50hz = designfilt('bandstopiir','FilterOrder', 6, ...
+                'StopbandFrequency1',48,'StopbandFrequency2',52, ...
+                'SampleRate',this.fs);
+
+%             [this.b1, this.a1] = tf(bpFilt);
+%             [this.b2, this.a2] = tf(notch_50hz);
+%             
+%             t1 = tf(b1 , a1);
+%             t2 = tf(b2 , a2);
+                        
+            this.do_filter = true;
+            if (en_bpFilt) && (en_notch_50hz)
+                this.selected_filer = tf(bpFilt);
+            elseif (~en_bpFilt) && (en_notch_50hz)
+                thiselected_filer = tf(notch_50hz);
+            elseif (en_bpFilt) && (~en_notch_50hz)
+                selected_filer = tf(bpFilt);
+            else
+                this.do_filter = false;
+                selected_filer = [1,1];
+            end
+%             this.merged_filter_a = merged_tf.Denominator{1};
+%             this.merged_filter_b = merged_tf.Numerator{1};
+
+            this.zf = [];
+        end
+
+        function filtered_data = filter(this, data) % TODO: check data matrix dimension - horizontal - vertical
+            if (this.do_filter)
+                if (isempty(this.zf))
+                    [filtered_data, this.zf] = filter(this.merged_filter_b, this.merged_filter_a, data);
+                else
+                    [filtered_data, this.zf] =...
+                        filter(this.merged_filter_b, this.merged_filter_a, data, this.zf);
+                end
+            else
+                filtered_data = data;
+            end
+        end
+    end
+end
+
